@@ -1,9 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 
 	"github.com/Jarimus/gator/internal/config"
+	"github.com/Jarimus/gator/internal/database"
+	_ "github.com/lib/pq"
 )
 
 func main() {
@@ -14,9 +17,17 @@ func main() {
 		log.Fatalf("error reading config file: %s", err)
 	}
 
+	// Connect to database
+	db, err := sql.Open("postgres", apiCfg.DbUrl)
+	if err != nil {
+		log.Fatalf("error opening connection to database: %s", err)
+	}
+	dbQueries := database.New(db)
+
 	// Current app state struct
 	state := State{
-		Config: &apiCfg,
+		config:    &apiCfg,
+		dbQueries: dbQueries,
 	}
 
 	// Initialize commands
@@ -25,8 +36,11 @@ func main() {
 		cmds: cmdsMap,
 	}
 	commands.register("login", handlerLogin)
+	commands.register("register", handlerRegister)
+	commands.register("reset", handlerReset)
+	commands.register("users", handlerDisplayUsers)
 
-	// Get command
+	// Get command from arguments
 	cmd, err := getCommand()
 	if err != nil {
 		log.Fatal(err)

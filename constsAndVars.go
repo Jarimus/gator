@@ -1,7 +1,11 @@
 package main
 
-import "github.com/Jarimus/gator/internal/config"
+import (
+	"github.com/Jarimus/gator/internal/config"
+	"github.com/Jarimus/gator/internal/database"
+)
 
 type State struct {
-	Config *config.Config
+	dbQueries *database.Queries
+	config    *config.Config
 }

@@ -1,9 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
+
+	"github.com/Jarimus/gator/internal/database"
+	"github.com/google/uuid"
 )
 
 type command struct {
@@ -49,12 +53,72 @@ func handlerLogin(s *State, cmd command) error {
 
 	// Use the first arg to set the current user
 	currentUser := cmd.args[0]
-	err := s.Config.SetUser(currentUser)
+	err := s.config.SetUser(currentUser)
 	if err != nil {
 		return err
 	}
 
 	fmt.Printf("User has been set to: %s\n", currentUser)
 
+	return nil
+}
+
+// Registers a new user
+func handlerRegister(s *State, cmd command) error {
+	// Check for args
+	if len(cmd.args) == 0 {
+		return errors.New("register command expects a single optional argument: <register> <username>")
+	}
+
+	// Use the first arg to get the username
+	newUser := cmd.args[0]
+
+	// First check if the current user exists
+	dbUser, err := s.dbQueries.GetUserByName(context.Background(), newUser)
+	if err != nil {
+	} else {
+		if dbUser.Name == newUser {
+			return errors.New("user already exists")
+		}
+	}
+
+	// parameters for the database quer
+	params := database.CreateUserParams{
+		ID:   uuid.New(),
+		Name: newUser,
+	}
+
+	// Register the user
+	_, err = s.dbQueries.CreateUser(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("New user registered: %s\nCurrent user set to registered user.\n", newUser)
+
+	return nil
+}
+
+func handlerReset(s *State, cmd command) error {
+	err := s.dbQueries.DeleteAllUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	fmt.Print("All users deleted.\n")
+	return nil
+}
+
+func handlerDisplayUsers(s *State, _ command) error {
+	users, err := s.dbQueries.GetAllUsers(context.Background())
+	if err != nil {
+		return err
+	}
+	if users == nil {
+		fmt.Print("No users.\n")
+	}
+
+	for i, user := range users {
+		fmt.Printf("%d: %s\n", i+1, user.Name)
+	}
 	return nil
 }
