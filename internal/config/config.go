@@ -13,6 +13,7 @@ type Config struct {
 }
 
 const configFileName = ".gatorconfig.json"
+const connectionString = "postgres://postgres:postgres@localhost:5432/gator?sslmode=disable"
 
 // Read the .gatorconfig.json file and returns it in Config struct format.
 func Read() (Config, error) {
@@ -25,7 +26,7 @@ func Read() (Config, error) {
 	// Check if the config file exists. If not, create an empty config file
 	_, err = os.Stat(filepath)
 	if errors.Is(err, os.ErrNotExist) {
-		newConfig := Config{DbUrl: "postgres://example"}
+		newConfig := Config{DbUrl: connectionString}
 		newFile, err := json.Marshal(newConfig)
 		if err != nil {
 			return Config{}, err
