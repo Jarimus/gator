@@ -39,6 +39,7 @@ func main() {
 	commands.register("register", handlerRegister)
 	commands.register("reset", handlerReset)
 	commands.register("users", handlerDisplayUsers)
+	commands.register("agg", handlerAggregateRSS)
 
 	// Get command from arguments
 	cmd, err := getCommand()

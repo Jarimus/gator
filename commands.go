@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Jarimus/gator/internal/database"
+	RSS "github.com/Jarimus/gator/internal/rss"
 	"github.com/google/uuid"
 )
 
@@ -128,7 +129,23 @@ func handlerDisplayUsers(s *State, _ command) error {
 	}
 
 	for i, user := range users {
-		fmt.Printf("%d: %s\n", i+1, user.Name)
+		if user.Name == s.config.CurrentUser {
+			fmt.Printf("%d: %s (current)\n", i+1, user.Name)
+		} else {
+			fmt.Printf("%d: %s\n", i+1, user.Name)
+		}
+
 	}
+	return nil
+}
+
+func handlerAggregateRSS(s *State, _ command) error {
+	rss, err := RSS.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v", rss)
+
 	return nil
 }
