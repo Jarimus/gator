@@ -52,13 +52,20 @@ func handlerLogin(s *State, cmd command) error {
 	}
 
 	// Use the first arg to set the current user
-	currentUser := cmd.args[0]
-	err := s.config.SetUser(currentUser)
+	userName := cmd.args[0]
+
+	// Check if the user exists
+	_, err := s.dbQueries.GetUserByName(context.Background(), userName)
+	if err != nil {
+		return errors.New("username not found")
+	}
+
+	err = s.config.SetUser(userName)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("User has been set to: %s\n", currentUser)
+	fmt.Printf("User has been set to: %s\n", userName)
 
 	return nil
 }
@@ -93,6 +100,9 @@ func handlerRegister(s *State, cmd command) error {
 	if err != nil {
 		return err
 	}
+
+	// Login the registered user
+	s.config.SetUser(newUser)
 
 	fmt.Printf("New user registered: %s\nCurrent user set to registered user.\n", newUser)
 
