@@ -119,7 +119,7 @@ func handlerReset(s *State, cmd command) error {
 	return nil
 }
 
-func handlerDisplayUsers(s *State, _ command) error {
+func handlerListUsers(s *State, _ command) error {
 	users, err := s.dbQueries.GetAllUsers(context.Background())
 	if err != nil {
 		return err
@@ -146,6 +146,58 @@ func handlerAggregateRSS(s *State, _ command) error {
 	}
 
 	fmt.Printf("%v", rss)
+
+	return nil
+}
+
+// Stores a given feed (title+url) to the database, connected to the current user
+func handlerAddFeed(s *State, cmd command) error {
+	if len(cmd.args) < 2 {
+		return errors.New("invalid arguments. usage: addFeed <\"feed title\"> <url>")
+	}
+
+	// Get the current user from the database
+	currentUser, err := s.dbQueries.GetUserByName(context.Background(), s.config.CurrentUser)
+	if err != nil {
+		return err
+	}
+
+	// Unpack args
+	feedTitle, url := cmd.args[0], cmd.args[1]
+
+	// Store the feed in the database
+	params := database.CreateFeedParams{
+		ID:     uuid.New(),
+		Name:   feedTitle,
+		Url:    url,
+		UserID: currentUser.ID,
+	}
+
+	dbFeed, err := s.dbQueries.CreateFeed(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("New feed stored!\nID: %s\nName: %s\nurl: %s\nfor user: %s", dbFeed.ID, dbFeed.Name, dbFeed.Url, s.config.CurrentUser)
+
+	return nil
+}
+
+func handlerListFeeds(s *State, _ command) error {
+	feeds, err := s.dbQueries.GetAllFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	fmt.Print("*******************\n")
+	for _, feed := range feeds {
+		user, err := s.dbQueries.GetUserById(context.Background(), feed.UserID)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("Name: %s\nurl: %s\nuser: %s\n*******************\n", feed.Name, feed.Url, user.Name)
+
+	}
 
 	return nil
 }
