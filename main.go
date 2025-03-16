@@ -40,8 +40,11 @@ func main() {
 	commands.register("reset", handlerReset)
 	commands.register("users", handlerListUsers)
 	commands.register("agg", handlerAggregateRSS)
-	commands.register("addfeed", handlerAddFeed)
+	commands.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	commands.register("feeds", handlerListFeeds)
+	commands.register("follow", middlewareLoggedIn(handlerFollowFeed))
+	commands.register("following", middlewareLoggedIn(handlerListFeedFollows))
+	commands.register("unfollow", middlewareLoggedIn(handlerUnfollowFeed))
 
 	// Get command from arguments
 	cmd, err := getCommand()

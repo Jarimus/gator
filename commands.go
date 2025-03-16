@@ -151,34 +151,36 @@ func handlerAggregateRSS(s *State, _ command) error {
 }
 
 // Stores a given feed (title+url) to the database, connected to the current user
-func handlerAddFeed(s *State, cmd command) error {
+func handlerAddFeed(s *State, cmd command, dbUser database.User) error {
 	if len(cmd.args) < 2 {
 		return errors.New("invalid arguments. usage: addFeed <\"feed title\"> <url>")
-	}
-
-	// Get the current user from the database
-	currentUser, err := s.dbQueries.GetUserByName(context.Background(), s.config.CurrentUser)
-	if err != nil {
-		return err
 	}
 
 	// Unpack args
 	feedTitle, url := cmd.args[0], cmd.args[1]
 
 	// Store the feed in the database
-	params := database.CreateFeedParams{
+	feedParams := database.CreateFeedParams{
 		ID:     uuid.New(),
 		Name:   feedTitle,
 		Url:    url,
-		UserID: currentUser.ID,
+		UserID: dbUser.ID,
 	}
 
-	dbFeed, err := s.dbQueries.CreateFeed(context.Background(), params)
+	dbFeed, err := s.dbQueries.CreateFeed(context.Background(), feedParams)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("New feed stored!\nID: %s\nName: %s\nurl: %s\nfor user: %s", dbFeed.ID, dbFeed.Name, dbFeed.Url, s.config.CurrentUser)
+	feedFollowParams := database.CreateFeedFollowParams{
+		ID:     uuid.New(),
+		FeedID: feedParams.ID,
+		UserID: dbUser.ID,
+	}
+
+	s.dbQueries.CreateFeedFollow(context.Background(), feedFollowParams)
+
+	fmt.Printf("New feed added and followed!\nID: %s\nName: %s\nurl: %s\nfor user: %s\n", dbFeed.ID, dbFeed.Name, dbFeed.Url, s.config.CurrentUser)
 
 	return nil
 }
@@ -187,6 +189,10 @@ func handlerListFeeds(s *State, _ command) error {
 	feeds, err := s.dbQueries.GetAllFeeds(context.Background())
 	if err != nil {
 		return err
+	}
+	if feeds == nil {
+		fmt.Print("No feeds found.\n")
+		return nil
 	}
 
 	fmt.Print("*******************\n")
@@ -197,6 +203,83 @@ func handlerListFeeds(s *State, _ command) error {
 		}
 		fmt.Printf("Name: %s\nurl: %s\nuser: %s\n*******************\n", feed.Name, feed.Url, user.Name)
 
+	}
+
+	return nil
+}
+
+func handlerFollowFeed(s *State, cmd command, dbCurrentUser database.User) error {
+	if len(cmd.args) < 1 {
+		return errors.New("not enought arguments: follow <\"url\">")
+	}
+
+	url := cmd.args[0]
+
+	dbFeed, err := s.dbQueries.GetFeedByUrl(context.Background(), url)
+	if err != nil {
+		return err
+	}
+
+	params := database.CreateFeedFollowParams{
+		ID:     uuid.New(),
+		FeedID: dbFeed.ID,
+		UserID: dbCurrentUser.ID,
+	}
+
+	dbFeedFollow, err := s.dbQueries.CreateFeedFollow(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("New feed follow added!\nFeed name: %s\nCurrent user: %s\n", dbFeedFollow.FeedName, dbFeedFollow.UserName)
+
+	return nil
+}
+
+func handlerUnfollowFeed(s *State, cmd command, dbUser database.User) error {
+
+	if len(cmd.args) < 1 {
+		fmt.Print("Invalid arguments. usage: unfollow <url>\n")
+		return nil
+	}
+
+	url := cmd.args[0]
+
+	dbFeed, err := s.dbQueries.GetFeedByUrl(context.Background(), url)
+	if err != nil {
+		return err
+	}
+
+	unfollowParams := database.UnfollowFeedParams{
+		FeedID: dbFeed.ID,
+		UserID: dbUser.ID,
+	}
+
+	err = s.dbQueries.UnfollowFeed(context.Background(), unfollowParams)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Unfollowed %s for user %s\n", dbFeed.Name, dbUser.Name)
+
+	return nil
+}
+
+func handlerListFeedFollows(s *State, cmd command, dbUser database.User) error {
+
+	dbFeedFollows, err := s.dbQueries.GetFeedFollowsForUserByID(context.Background(), dbUser.ID)
+	if err != nil {
+		return err
+	}
+
+	if dbFeedFollows == nil {
+		fmt.Print("No feeds being followed.\n")
+		return nil
+	}
+
+	fmt.Printf("Feeds %s is following:\n", dbFeedFollows[0].UserName)
+	for i, feedFollow := range dbFeedFollows {
+		fmt.Printf("%d: %s (%s)\n", i+1, feedFollow.FeedName, feedFollow.Url)
 	}
 
 	return nil

@@ -17,5 +17,9 @@ SELECT * FROM feeds;
 SELECT * FROM feeds
     WHERE user_id = $1;
 
+-- name: GetFeedByUrl :one
+SELECT * FROM feeds
+    WHERE url = $1;
+
 -- name: DeleteAllFeeds :exec
 DELETE FROM feeds;
