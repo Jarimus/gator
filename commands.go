@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"html"
 	"os"
+	"regexp"
+	"strconv"
 	"time"
 
 	"github.com/Jarimus/gator/internal/database"
@@ -291,6 +294,42 @@ func handlerListFeedFollows(s *State, cmd command, dbUser database.User) error {
 	fmt.Printf("Feeds %s is following:\n", dbFeedFollows[0].UserName)
 	for i, feedFollow := range dbFeedFollows {
 		fmt.Printf("%d: %s (%s)\n", i+1, feedFollow.FeedName, feedFollow.Url)
+	}
+
+	return nil
+}
+
+func handlerBrowsePosts(s *State, cmd command, dbUser database.User) error {
+	var limit int
+	var err error
+	if len(cmd.args) >= 1 {
+		limit, err = strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return errors.New("optional argument needs to be an integer. defaults to 2. usage: browse [limit]")
+		}
+	} else {
+		limit = 2
+	}
+
+	params := database.GetPostsForUserParams{
+		UserID: dbUser.ID,
+		Limit:  int32(limit),
+	}
+
+	posts, err := s.dbQueries.GetPostsForUser(context.Background(), params)
+	if err != nil {
+		return err
+	}
+
+	for _, post := range posts {
+		description := html.UnescapeString(post.Description)
+		pTagRemover, err := regexp.Compile(`<.*?>`)
+		if err != nil {
+			return err
+		}
+		description = pTagRemover.ReplaceAllString(description, "")
+		fmt.Printf("%s (%v)\n\n%s\n\n%s\n", post.Title, post.PublishedAt.Format("02-01-2006"), post.Url, description)
+		print("********************************************************\n\n")
 	}
 
 	return nil

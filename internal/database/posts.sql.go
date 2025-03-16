@@ -8,11 +8,12 @@ package database
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
 
-const createPost = `-- name: createPost :one
+const createPost = `-- name: CreatePost :one
 INSERT INTO posts (id, created_at, updated_at, title, url, description, published_at, feed_id)
 VALUES (
     $1,
@@ -27,16 +28,16 @@ VALUES (
 RETURNING id, created_at, updated_at, title, url, description, published_at, feed_id
 `
 
-type createPostParams struct {
+type CreatePostParams struct {
 	ID          uuid.UUID
-	Title       sql.NullString
+	Title       string
 	Url         string
-	Description sql.NullString
-	PublishedAt sql.NullTime
-	FeedID      uuid.NullUUID
+	Description string
+	PublishedAt time.Time
+	FeedID      uuid.UUID
 }
 
-func (q *Queries) createPost(ctx context.Context, arg createPostParams) (Post, error) {
+func (q *Queries) CreatePost(ctx context.Context, arg CreatePostParams) (Post, error) {
 	row := q.db.QueryRowContext(ctx, createPost,
 		arg.ID,
 		arg.Title,
@@ -59,28 +60,28 @@ func (q *Queries) createPost(ctx context.Context, arg createPostParams) (Post, e
 	return i, err
 }
 
-const getPostsForUser = `-- name: getPostsForUser :many
+const getPostsForUser = `-- name: GetPostsForUser :many
 SELECT posts.id, posts.created_at, posts.updated_at, title, url, description, published_at, posts.feed_id, feed_follows.id, feed_follows.created_at, feed_follows.updated_at, feed_follows.feed_id, user_id FROM posts
-    JOIN feed_follows ON feed_follows.feed_id = feed_id
+    JOIN feed_follows ON feed_follows.feed_id = posts.feed_id
     WHERE feed_follows.user_id = $1
-    ORDER BY posts.updated_at DESC
+    ORDER BY posts.updated_at ASC NULLS LAST
     LIMIT $2
 `
 
-type getPostsForUserParams struct {
+type GetPostsForUserParams struct {
 	UserID uuid.UUID
 	Limit  int32
 }
 
-type getPostsForUserRow struct {
+type GetPostsForUserRow struct {
 	ID          uuid.UUID
-	CreatedAt   sql.NullTime
-	UpdatedAt   sql.NullTime
-	Title       sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Title       string
 	Url         string
-	Description sql.NullString
-	PublishedAt sql.NullTime
-	FeedID      uuid.NullUUID
+	Description string
+	PublishedAt time.Time
+	FeedID      uuid.UUID
 	ID_2        uuid.UUID
 	CreatedAt_2 sql.NullTime
 	UpdatedAt_2 sql.NullTime
@@ -88,15 +89,15 @@ type getPostsForUserRow struct {
 	UserID      uuid.UUID
 }
 
-func (q *Queries) getPostsForUser(ctx context.Context, arg getPostsForUserParams) ([]getPostsForUserRow, error) {
+func (q *Queries) GetPostsForUser(ctx context.Context, arg GetPostsForUserParams) ([]GetPostsForUserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getPostsForUser, arg.UserID, arg.Limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []getPostsForUserRow
+	var items []GetPostsForUserRow
 	for rows.Next() {
-		var i getPostsForUserRow
+		var i GetPostsForUserRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.CreatedAt,

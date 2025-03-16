@@ -6,6 +6,7 @@ package database
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -30,13 +31,13 @@ type FeedFollow struct {
 
 type Post struct {
 	ID          uuid.UUID
-	CreatedAt   sql.NullTime
-	UpdatedAt   sql.NullTime
-	Title       sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	Title       string
 	Url         string
-	Description sql.NullString
-	PublishedAt sql.NullTime
-	FeedID      uuid.NullUUID
+	Description string
+	PublishedAt time.Time
+	FeedID      uuid.UUID
 }
 
 type User struct {

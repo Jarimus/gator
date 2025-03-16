@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Jarimus/gator/internal/database"
 	rss "github.com/Jarimus/gator/internal/rss"
+	"github.com/araddon/dateparse"
+	"github.com/google/uuid"
 )
 
 func scrapeFeeds(s *State) error {
@@ -24,10 +27,28 @@ func scrapeFeeds(s *State) error {
 	}
 
 	fmt.Print("*******************************************\n")
-	fmt.Printf("RSS feed from %s\n", rssFeed.Channel.Title)
+	fmt.Printf("Fetching RSS feed from %s\n", rssFeed.Channel.Title)
 	fmt.Print("*******************************************\n")
-	for i, item := range rssFeed.Channel.Item {
-		fmt.Printf("%d: %s (%s)\n", i+1, item.Title, item.Link)
+	for _, item := range rssFeed.Channel.Item {
+
+		pubDate, err := dateparse.ParseAny(item.PubDate)
+		if err != nil {
+			return err
+		}
+
+		params := database.CreatePostParams{
+			ID:          uuid.New(),
+			Title:       item.Title,
+			Url:         item.Link,
+			Description: item.Description,
+			PublishedAt: pubDate,
+			FeedID:      nextFeed.ID,
+		}
+
+		_, err = s.dbQueries.CreatePost(context.Background(), params)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
