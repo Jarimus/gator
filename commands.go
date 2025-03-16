@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Jarimus/gator/internal/database"
-	RSS "github.com/Jarimus/gator/internal/rss"
 	"github.com/google/uuid"
 )
 
@@ -139,15 +139,26 @@ func handlerListUsers(s *State, _ command) error {
 	return nil
 }
 
-func handlerAggregateRSS(s *State, _ command) error {
-	rss, err := RSS.FetchFeed(context.Background(), "https://www.wagslane.dev/index.xml")
+func handlerAggregateRSS(s *State, cmd command) error {
+
+	if len(cmd.args) < 1 {
+		return errors.New("not enought arguments. usage: agg <time_between_requests> (valid time units: \"ns\", \"us\", \"ms\", \"s\", \"m\", \"h\")")
+	}
+
+	// parse time arguments
+	interval, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("%v", rss)
+	ticker := time.NewTicker(interval)
+	for ; ; <-ticker.C {
+		err = scrapeFeeds(s)
+		if err != nil {
+			return err
+		}
+	}
 
-	return nil
 }
 
 // Stores a given feed (title+url) to the database, connected to the current user
