@@ -142,7 +142,7 @@ func handlerListUsers(s *State, _ command) error {
 	return nil
 }
 
-func handlerAggregateRSS(s *State, cmd command) error {
+func handlerAggregateRSS(s *State, cmd command, dbUser database.User) error {
 
 	if len(cmd.args) < 1 {
 		return errors.New("not enought arguments. usage: agg <time_between_requests> (valid time units: \"ns\", \"us\", \"ms\", \"s\", \"m\", \"h\")")
@@ -156,7 +156,7 @@ func handlerAggregateRSS(s *State, cmd command) error {
 
 	ticker := time.NewTicker(interval)
 	for ; ; <-ticker.C {
-		err = scrapeFeeds(s)
+		err = scrapeFeeds(s, dbUser)
 		if err != nil {
 			return err
 		}

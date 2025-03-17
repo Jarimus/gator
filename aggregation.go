@@ -10,9 +10,10 @@ import (
 	"github.com/google/uuid"
 )
 
-func scrapeFeeds(s *State) error {
-	nextFeed, err := s.dbQueries.GetNextFeedToFetch(context.Background())
+func scrapeFeeds(s *State, dbUser database.User) error {
+	nextFeed, err := s.dbQueries.GetNextFeedToFetch(context.Background(), dbUser.ID)
 	if err != nil {
+		fmt.Print("no feeds followed")
 		return err
 	}
 
@@ -47,7 +48,8 @@ func scrapeFeeds(s *State) error {
 
 		_, err = s.dbQueries.CreatePost(context.Background(), params)
 		if err != nil {
-			return err
+			// Ignore if the post already exists. But how do I make sure only the unique value is causing the error?
+			continue
 		}
 	}
 
