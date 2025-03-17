@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/Jarimus/gator/internal/database"
@@ -13,8 +14,7 @@ import (
 func scrapeFeeds(s *State, dbUser database.User) error {
 	nextFeed, err := s.dbQueries.GetNextFeedToFetch(context.Background(), dbUser.ID)
 	if err != nil {
-		fmt.Print("no feeds followed")
-		return err
+		return errors.New("no feeds followed")
 	}
 
 	err = s.dbQueries.MarkFeedFetched(context.Background(), nextFeed.ID)

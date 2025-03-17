@@ -44,6 +44,10 @@ func getCommand() (command, error) {
 
 // Runs the command of the given name
 func (c *commands) run(s *State, cmd command) error {
+	_, ok := c.cmds[cmd.name]
+	if !ok {
+		return errors.New("invalid command. use 'gator help' to get a list of commands")
+	}
 	err := c.cmds[cmd.name](s, cmd)
 	return err
 }
@@ -144,15 +148,19 @@ func handlerListUsers(s *State, _ command) error {
 
 func handlerAggregateRSS(s *State, cmd command, dbUser database.User) error {
 
+	var interval time.Duration
+	var err error
 	if len(cmd.args) < 1 {
-		return errors.New("not enought arguments. usage: agg <time_between_requests> (valid time units: \"ns\", \"us\", \"ms\", \"s\", \"m\", \"h\")")
+		interval = time.Hour
+	} else {
+		// parse time arguments
+		interval, err = time.ParseDuration(cmd.args[0])
+		if err != nil {
+			return err
+		}
 	}
 
-	// parse time arguments
-	interval, err := time.ParseDuration(cmd.args[0])
-	if err != nil {
-		return err
-	}
+	fmt.Printf("Scraping feeds every %v\nUse 'agg [time]' to set a custom interval.\n", interval)
 
 	ticker := time.NewTicker(interval)
 	for ; ; <-ticker.C {
@@ -167,7 +175,7 @@ func handlerAggregateRSS(s *State, cmd command, dbUser database.User) error {
 // Stores a given feed (title+url) to the database, connected to the current user
 func handlerAddFeed(s *State, cmd command, dbUser database.User) error {
 	if len(cmd.args) < 2 {
-		return errors.New("invalid arguments. usage: addFeed <\"feed title\"> <url>")
+		return errors.New("invalid arguments. usage: addFeed <feed title> <url>")
 	}
 
 	// Unpack args
@@ -194,7 +202,7 @@ func handlerAddFeed(s *State, cmd command, dbUser database.User) error {
 
 	s.dbQueries.CreateFeedFollow(context.Background(), feedFollowParams)
 
-	fmt.Printf("New feed added and followed!\nID: %s\nName: %s\nurl: %s\nfor user: %s\n", dbFeed.ID, dbFeed.Name, dbFeed.Url, s.config.CurrentUser)
+	fmt.Printf("New feed added and followed!\nID: %s\nName: %s\nUrl: %s\nFor user: %s\n", dbFeed.ID, dbFeed.Name, dbFeed.Url, s.config.CurrentUser)
 
 	return nil
 }
@@ -224,7 +232,7 @@ func handlerListFeeds(s *State, _ command) error {
 
 func handlerFollowFeed(s *State, cmd command, dbCurrentUser database.User) error {
 	if len(cmd.args) < 1 {
-		return errors.New("not enought arguments: follow <\"url\">")
+		return errors.New("not enought arguments: follow <url>")
 	}
 
 	url := cmd.args[0]

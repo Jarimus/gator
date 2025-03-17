@@ -2,7 +2,9 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/Jarimus/gator/internal/config"
 	"github.com/Jarimus/gator/internal/database"
@@ -47,6 +49,12 @@ func main() {
 	commands.register("unfollow", middlewareLoggedIn(handlerUnfollowFeed))
 	commands.register("browse", middlewareLoggedIn(handlerBrowsePosts))
 
+	// If program started with no args, display help
+	if len(os.Args) == 1 || (len(os.Args) >= 2 && os.Args[1] == "help") {
+		help(commands)
+		return
+	}
+
 	// Get command from arguments
 	cmd, err := getCommand()
 	if err != nil {
@@ -57,5 +65,12 @@ func main() {
 	err = commands.run(&state, cmd)
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+func help(commands commands) {
+	fmt.Print("gator is used with commands:\n")
+	for cmdKey := range commands.cmds {
+		fmt.Println(cmdKey)
 	}
 }
